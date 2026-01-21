@@ -29,9 +29,6 @@ const SaleAnalytic = () => {
     todayReturns: 0,
     todayReplaces: 0,
     weeklySales: 0,
-    todayReturns: 0,
-    todayReplaces: 0,
-    weeklySales: 0,
     monthlySales: 0,
   });
 
@@ -82,7 +79,7 @@ const SaleAnalytic = () => {
     const today = now.toISOString().split("T")[0];
     const oneWeekAgo = new Date(now.setDate(now.getDate() - 7));
     const oneMonthAgo = new Date(
-      new Date().setMonth(new Date().getMonth() - 1)
+      new Date().setMonth(new Date().getMonth() - 1),
     );
 
     let totalOrders = 0;
@@ -212,7 +209,7 @@ const SaleAnalytic = () => {
         (sale) =>
           sale.invoiceNo?.toLowerCase().includes(lowerTerm) ||
           sale.customer?.name?.toLowerCase().includes(lowerTerm) ||
-          sale.customer?.phone?.includes(lowerTerm)
+          sale.customer?.phone?.includes(lowerTerm),
       );
     }
 

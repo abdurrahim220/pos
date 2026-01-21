@@ -1,9 +1,10 @@
+import React from "react";
 import { useEffect, useState } from "react";
 import axiosClient from "../../api/axiosClient";
 import CategoryTreeSelect from "../../components/common/CategoryTreeSelect";
 import ProductDataCard from "./ProductDataCard";
 import MultiImageUpload from "../../components/ui/MultiImageUpload";
-import ReactQuill from "react-quill";
+import ReactQuill from "react-quill-new";
 
 import { toast } from "react-toastify";
 import { useNavigate, useParams } from "react-router-dom";

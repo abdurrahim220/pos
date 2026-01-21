@@ -1,3 +1,4 @@
+import React from "react";
 import { useEffect, useState } from "react";
 import {
   removeVariation,
@@ -6,7 +7,7 @@ import {
 } from "../../../features/product/productSlice";
 import ImageUploader from "../../../components/common/imageUploader";
 import axiosClient from "../../../api/axiosClient";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { Icon } from "@iconify/react";
 
 const Variation = ({ index, variation }) => {
@@ -14,6 +15,7 @@ const Variation = ({ index, variation }) => {
   const [skuValid, setSkuValid] = useState(null);
   const [isChecking, setIsChecking] = useState(false);
   const dispatch = useDispatch();
+  const { branches } = useSelector((state) => state.product);
 
   // Sync validated SKU back to Redux
   useEffect(() => {
@@ -23,7 +25,7 @@ const Variation = ({ index, variation }) => {
           index,
           field: "sku",
           value: sku,
-        })
+        }),
       );
     }
   }, [skuValid, isChecking, sku, dispatch, index]);
@@ -39,7 +41,7 @@ const Variation = ({ index, variation }) => {
       try {
         setIsChecking(true);
         const response = await axiosClient.get(
-          `/products/validate-sku?sku=${encodeURIComponent(sku)}`
+          `/products/validate-sku?sku=${encodeURIComponent(sku)}`,
         );
         setSkuValid(response.data.success);
       } catch (error) {
@@ -63,7 +65,7 @@ const Variation = ({ index, variation }) => {
         index,
         field: "images",
         value: updatedImages,
-      })
+      }),
     );
   };
 
@@ -77,7 +79,7 @@ const Variation = ({ index, variation }) => {
         index,
         field: "images",
         value: updatedImages,
-      })
+      }),
     );
 
     // If removed image was the default, clear default image
@@ -90,7 +92,7 @@ const Variation = ({ index, variation }) => {
         updateVariationDefaultImage({
           index,
           image: null,
-        })
+        }),
       );
     }
   };
@@ -101,7 +103,7 @@ const Variation = ({ index, variation }) => {
       updateVariationDefaultImage({
         index,
         image: image,
-      })
+      }),
     );
   };
 
@@ -219,27 +221,151 @@ const Variation = ({ index, variation }) => {
           ) : null}
         </div>
 
+        {/* Branch Stock Management */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Stock
+            Branch Stock
           </label>
-          <input
-            type="text"
-            name="stock"
-            value={variation.stock || ""}
-            className="border rounded-lg px-4 py-3 w-full text-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-            placeholder="Stock"
+
+          {/* Branch Selector */}
+          <select
+            className="border border-gray-300 rounded px-2 py-1 text-sm mb-2 w-full"
             onChange={(e) => {
-              const val = e.target.value === "" ? null : Number(e.target.value);
-              dispatch(
-                updateVariationField({
-                  index,
-                  field: "stock",
-                  value: val,
-                })
-              );
+              if (e.target.value) {
+                const branchId = e.target.value;
+                const currentBranchStocks = variation.branchStocks || [];
+                if (!currentBranchStocks.find((b) => b.branchId === branchId)) {
+                  const newBranchStocks = [
+                    ...currentBranchStocks,
+                    { branchId, stock: 0 },
+                  ];
+                  const total = newBranchStocks.reduce(
+                    (sum, b) => sum + Number(b.stock || 0),
+                    0,
+                  );
+
+                  dispatch(
+                    updateVariationField({
+                      index,
+                      field: "branchStocks",
+                      value: newBranchStocks,
+                    }),
+                  );
+                  dispatch(
+                    updateVariationField({
+                      index,
+                      field: "stock",
+                      value: total,
+                    }),
+                  );
+                }
+                e.target.value = ""; // Reset selector
+              }
             }}
-          />
+          >
+            <option value="">+ Add Branch</option>
+            {branches &&
+              branches.length > 0 &&
+              branches
+                .filter(
+                  (b) =>
+                    !variation.branchStocks?.find(
+                      (bs) => bs.branchId === b._id,
+                    ),
+                )
+                .map((b) => (
+                  <option key={b._id} value={b._id}>
+                    {b.name}
+                  </option>
+                ))}
+          </select>
+
+          {/* Branch Stock Inputs */}
+          {variation.branchStocks && variation.branchStocks.length > 0 && (
+            <div className="space-y-2 mt-2">
+              {variation.branchStocks.map((bStock, bIndex) => (
+                <div
+                  key={bStock.branchId}
+                  className="border p-2 rounded relative bg-gray-50"
+                >
+                  <button
+                    type="button"
+                    className="absolute top-1 right-1 text-red-500 hover:text-red-700 text-xs"
+                    onClick={() => {
+                      const newBranchStocks = variation.branchStocks.filter(
+                        (b) => b.branchId !== bStock.branchId,
+                      );
+                      const total = newBranchStocks.reduce(
+                        (sum, b) => sum + Number(b.stock || 0),
+                        0,
+                      );
+
+                      dispatch(
+                        updateVariationField({
+                          index,
+                          field: "branchStocks",
+                          value: newBranchStocks,
+                        }),
+                      );
+                      dispatch(
+                        updateVariationField({
+                          index,
+                          field: "stock",
+                          value: total,
+                        }),
+                      );
+                    }}
+                  >
+                    ×
+                  </button>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    {branches?.find((b) => b._id === bStock.branchId)?.name ||
+                      `Branch ${bStock.branchId}`}
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={bStock.stock}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const newBranchStocks = [...variation.branchStocks];
+                      newBranchStocks[bIndex] = {
+                        ...newBranchStocks[bIndex],
+                        stock: Number(val) || 0,
+                      };
+                      const total = newBranchStocks.reduce(
+                        (sum, b) => sum + Number(b.stock || 0),
+                        0,
+                      );
+
+                      dispatch(
+                        updateVariationField({
+                          index,
+                          field: "branchStocks",
+                          value: newBranchStocks,
+                        }),
+                      );
+                      dispatch(
+                        updateVariationField({
+                          index,
+                          field: "stock",
+                          value: total,
+                        }),
+                      );
+                    }}
+                    placeholder="Stock"
+                    className="w-full border border-gray-300 rounded px-2 py-1 text-sm bg-white"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Total Stock Display */}
+          <div className="mt-2 text-sm text-gray-600">
+            Total Stock:{" "}
+            <span className="font-semibold">{variation.stock || 0}</span>
+          </div>
         </div>
       </div>
 
@@ -260,7 +386,7 @@ const Variation = ({ index, variation }) => {
                   index,
                   field: "purchase_price",
                   value: val,
-                })
+                }),
               );
             }}
             className="border rounded-lg px-4 py-3 w-full text-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
@@ -283,7 +409,7 @@ const Variation = ({ index, variation }) => {
                   index,
                   field: "sale_price",
                   value: val,
-                })
+                }),
               );
             }}
             className="border rounded-lg px-4 py-3 w-full text-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
@@ -304,7 +430,7 @@ const Variation = ({ index, variation }) => {
                 index,
                 field: "status",
                 value: e.target.value,
-              })
+              }),
             )
           }
           value={variation.status || "active"}

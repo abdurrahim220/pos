@@ -13,13 +13,15 @@ import {
 import axiosClient from "../../api/axiosClient";
 import DefaultAttributeSelector from "./DefaultAttributeSelector";
 
-const ProductDataCard = ({
-  Allattributes,
-  formData,
-  setFormData,
-}) => {
-  const { type, selectedValues, activeTab, selactedAttributeIds, variations } =
-    useSelector((state) => state.product);
+const ProductDataCard = ({ Allattributes, formData, setFormData }) => {
+  const {
+    type,
+    selectedValues,
+    activeTab,
+    selactedAttributeIds,
+    variations,
+    branches,
+  } = useSelector((state) => state.product);
   const dispatch = useDispatch();
   const [sku, setSku] = useState(formData.sku || "");
 
@@ -43,7 +45,7 @@ const ProductDataCard = ({
       try {
         setIsChecking(true);
         const response = await axiosClient.get(
-          `/products/validate-sku?sku=${sku}`
+          `/products/validate-sku?sku=${sku}`,
         );
         setSkuValid(response.data.success);
       } catch (error) {
@@ -62,13 +64,13 @@ const ProductDataCard = ({
       setSelactedAttributeIds(
         selactedAttributeIds.includes(id)
           ? selactedAttributeIds
-          : [...selactedAttributeIds, id]
-      )
+          : [...selactedAttributeIds, id],
+      ),
     );
   };
   const handleDeleteAttributeId = (id, name) => {
     dispatch(
-      setSelactedAttributeIds(selactedAttributeIds.filter((aid) => aid !== id))
+      setSelactedAttributeIds(selactedAttributeIds.filter((aid) => aid !== id)),
     );
     dispatch(removeSelectedAttribute(name));
   };
@@ -76,8 +78,8 @@ const ProductDataCard = ({
   const handleRemoveValue = (valueToRemove) => {
     dispatch(
       setSelectedValues(
-        selectedValues.filter((value) => value !== valueToRemove)
-      )
+        selectedValues.filter((value) => value !== valueToRemove),
+      ),
     );
   };
 
@@ -173,7 +175,7 @@ const ProductDataCard = ({
                       className=" bg-blue-500 px-2  mb-1 rounded-md text-white"
                       onClick={() =>
                         setSku(
-                          `${Math.floor(100000000 + Math.random() * 900000000)}`
+                          `${Math.floor(100000000 + Math.random() * 900000000)}`,
                         )
                       }
                     >
@@ -217,17 +219,144 @@ const ProductDataCard = ({
                 {/* STOCK Field */}
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700">
-                    STOCK
+                    Warehouse Stock (Default)
                   </label>
                   <input
-                    type="text"
+                    type="number"
                     name="stock"
                     value={formData.stock}
                     onChange={handleInputChange}
-                    placeholder="STOCK"
+                    placeholder="Warehouse Stock"
                     className="w-full border border-gray-300 rounded px-3 py-2"
                   />
+                  {formData.branchStocks &&
+                    formData.branchStocks.length > 0 && (
+                      <p className="text-xs text-blue-500 mt-1">
+                        Stock is currently managed via Branch Stocks below.
+                        Total: {formData.stock}
+                      </p>
+                    )}
                 </div>
+
+                {/* Branch Stocks */}
+                {branches && branches.length > 0 && (
+                  <div className="mb-4 border-t pt-4">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-3">
+                      Branch Stocks
+                    </h4>
+
+                    {/* Add Branch Selector */}
+                    <div className="mb-3">
+                      <select
+                        className="border border-gray-300 rounded px-2 py-1 text-sm"
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            const branchId = e.target.value;
+                            const currentBranchStocks =
+                              formData.branchStocks || [];
+                            if (
+                              !currentBranchStocks.find(
+                                (b) => b.branchId === branchId,
+                              )
+                            ) {
+                              const newBranchStocks = [
+                                ...currentBranchStocks,
+                                { branchId, stock: 0 },
+                              ];
+                              const total = newBranchStocks.reduce(
+                                (sum, b) => sum + Number(b.stock || 0),
+                                0,
+                              );
+                              setFormData({
+                                branchStocks: newBranchStocks,
+                                stock: total,
+                              });
+                            }
+                          }
+                        }}
+                        value=""
+                      >
+                        <option value="">+ Add Branch</option>
+                        {branches
+                          .filter(
+                            (b) =>
+                              !formData.branchStocks?.find(
+                                (bs) => bs.branchId === b._id,
+                              ),
+                          )
+                          .map((b) => (
+                            <option key={b._id} value={b._id}>
+                              {b.name}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      {formData.branchStocks &&
+                        formData.branchStocks.map((bStock, index) => {
+                          const branchName =
+                            branches.find((b) => b._id === bStock.branchId)
+                              ?.name || "Unknown Branch";
+                          return (
+                            <div
+                              key={bStock.branchId}
+                              className="border p-2 rounded relative"
+                            >
+                              <button
+                                type="button"
+                                className="absolute top-1 right-1 text-red-500 hover:text-red-700"
+                                onClick={() => {
+                                  const newBranchStocks =
+                                    formData.branchStocks.filter(
+                                      (b) => b.branchId !== bStock.branchId,
+                                    );
+                                  const total = newBranchStocks.reduce(
+                                    (sum, b) => sum + Number(b.stock || 0),
+                                    0,
+                                  );
+                                  setFormData({
+                                    branchStocks: newBranchStocks,
+                                    stock: total,
+                                  });
+                                }}
+                              >
+                                ×
+                              </button>
+                              <label className="block text-sm font-medium text-gray-600 mb-1">
+                                {branchName}
+                              </label>
+                              <input
+                                type="number"
+                                min="0"
+                                value={bStock.stock}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  const newBranchStocks = [
+                                    ...formData.branchStocks,
+                                  ];
+                                  newBranchStocks[index] = {
+                                    ...newBranchStocks[index],
+                                    stock: val,
+                                  };
+                                  const total = newBranchStocks.reduce(
+                                    (sum, b) => sum + Number(b.stock || 0),
+                                    0,
+                                  );
+                                  setFormData({
+                                    branchStocks: newBranchStocks,
+                                    stock: total,
+                                  });
+                                }}
+                                placeholder="Stock"
+                                className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                              />
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="mt-4">
@@ -302,7 +431,7 @@ const ProductDataCard = ({
                     handleDeleteAttributeId={handleDeleteAttributeId}
                   />
                 ))}
-                <DefaultAttributeSelector />
+              <DefaultAttributeSelector />
             </div>
           </div>
         )}
