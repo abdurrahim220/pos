@@ -1,21 +1,23 @@
-import { FaEye } from "react-icons/fa";
+import { Eye } from "lucide-react";
 import React, { useState } from "react";
-import StockHistoryModal from "./StockHistoryModal.jsx";
-import StockRequestsModal from "./StockRequestsModal.jsx";
+import StockHistoryModal from "./StockHistoryModal";
+import StockRequestsModal from "./stockrequestModal"; // ✅ New Import
 import Barcode from "react-barcode";
 import axiosClient from "../../api/axiosClient";
 
 const StockTable = ({ totalStocks, limit, stocks, currentPage, onEdit }) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false); // ✅ New state
   const [selectedStockId, setSelectedStockId] = useState(null);
+  const [selectedStock, setSelectedStock] = useState(null);
 
   const [printBarcode, setPrintBarcode] = useState(null);
   const [printQr, setPrintQr] = useState(null);
 
-  const handleEditClick = (stockId) => {
-    setSelectedStockId(stockId);
+  const handleEditClick = (stock) => {
+    setSelectedStockId(stock._id);
+    setSelectedStock(stock);
     setIsEditModalOpen(true);
   };
 
@@ -27,6 +29,7 @@ const StockTable = ({ totalStocks, limit, stocks, currentPage, onEdit }) => {
   const closeEditModal = () => {
     setIsEditModalOpen(false);
     setSelectedStockId(null);
+    setSelectedStock(null);
   };
 
   const closeViewModal = () => {
@@ -46,11 +49,23 @@ const StockTable = ({ totalStocks, limit, stocks, currentPage, onEdit }) => {
       const action = formData.get("action");
       const quantity = parseInt(formData.get("quantity"), 10);
       const reason = formData.get("reason");
+      const branchId = formData.get("branchId");
 
-      if (!["increase", "decrease"].includes(action)) return;
-      if (isNaN(quantity) || quantity <= 0) return;
+      if (!["increase", "decrease"].includes(action)) {
+        console.error("Invalid action:", action);
+        return;
+      }
+      if (isNaN(quantity) || quantity <= 0) {
+        console.error("Invalid quantity:", quantity);
+        return;
+      }
 
-      await onEdit(selectedStockId, { action, quantity, reason });
+      await onEdit(selectedStockId, {
+        action,
+        quantity,
+        reason,
+        branchId: branchId || null,
+      });
       closeEditModal();
     } catch (error) {
       console.error("Error updating stock:", error);
@@ -65,7 +80,7 @@ const StockTable = ({ totalStocks, limit, stocks, currentPage, onEdit }) => {
   const handlePrintBarcode = async (sku) => {
     try {
       const res = await axiosClient.get(
-        `/frontend/br-codes/print?page=1&limit=1&search=${sku}`
+        `/frontend/br-codes/print?page=1&limit=1&search=${sku}`,
       );
 
       if (!res.data.success || res.data.barcodes.length === 0) {
@@ -122,7 +137,7 @@ const StockTable = ({ totalStocks, limit, stocks, currentPage, onEdit }) => {
   const handlePrintQr = async (sku) => {
     try {
       const res = await axiosClient.get(
-        `/frontend/br-codes/qr/print?page=1&limit=1&search=${sku}`
+        `/frontend/br-codes/qr/print?page=1&limit=1&search=${sku}`,
       );
 
       if (!res.data.success || res.data.qrCodes.length === 0) {
@@ -201,23 +216,22 @@ const StockTable = ({ totalStocks, limit, stocks, currentPage, onEdit }) => {
     <>
       <table className="w-full text-left border-collapse">
         <thead>
-          <tr className="bg-gray-100 text-gray-700">
-            <th className="px-4 py-2">SL</th>
-            <th className="px-4 py-2">Image</th>
+          <tr className="bg-gray-100 ">
+            <th className="px-4 py-2 ">SL</th>
+            <th className="px-4 py-2 ">Image</th>
             <th className="px-4 py-2">Product Name</th>
             <th className="px-4 py-2">Attributes</th>
             <th className="px-4 py-2">SKU</th>
             <th className="px-4 py-2">Current Stock</th>
-            <th className="px-4 py-2 text-center">Actions</th>
+            <th className="px-4 py-2">Actions</th>
           </tr>
         </thead>
 
         <tbody>
           {stocks?.length > 0 &&
             stocks?.map((stock, index) => (
-              <tr key={stock._id} className="border-b hover:bg-gray-50">
-                <td className="px-4 py-2 font-medium">{sirialFrom - index}</td>
-
+              <tr key={stock._id} className="border-b">
+                <td className="px-4 py-2">{sirialFrom - index}</td>
                 <td className="px-4 py-3">
                   <img
                     style={{ objectFit: "contain" }}
@@ -230,60 +244,60 @@ const StockTable = ({ totalStocks, limit, stocks, currentPage, onEdit }) => {
                           stock?.images?.[0]?.small
                     }
                     alt=""
-                    className="w-12 h-12 rounded-lg border bg-white shadow-sm"
+                    className="w-12 h-12  object-contain"
                   />
                 </td>
-
-                <td className="px-4 py-2 underline text-blue-600">
+                <td className="px-4 py-2 underline">
                   <a
                     href={`https://www.shoelicious.com.bd/product-detail/${stock.productSlug}`}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    {stock.productName}
+                    {stock.productName || "N/A"}
                   </a>
                 </td>
-
                 <td className="px-4 py-2">
                   {stock.type === "simple"
-                    ? stock?.productAttributes?.map((a) => a.values).join(" | ")
-                    : stock?.variantDetails?.attributes
-                        ?.map((a) => a.value)
-                        .join(" | ")}
+                    ? stock?.productAttributes
+                        ?.map((atrr) => atrr.values)
+                        .join(" | ")
+                    : stock.variantDetails?.attributes
+                        ?.map((atrr) => atrr.value)
+                        .join(" | ") || "N/A"}
+                </td>
+                <td className="px-4 py-2">{stock.sku || "N/A"}</td>
+                <td className="px-4 py-2">
+                  <div>{stock.currentStock || 0}</div>
+                  {stock.branches && stock.branches.length > 0 && (
+                    <div className="text-xs text-gray-500 mt-1">
+                      {stock.branches.map((b, idx) => (
+                        <div key={idx}>
+                          {b.branchName}: {b.branchStock}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </td>
 
-                <td className="px-4 py-2">{stock.sku}</td>
-
-                <td
-                  className={`px-4 py-2 font-semibold ${
-                    stock.currentStock <= 5 ? "text-red-600" : "text-gray-800"
-                  }`}
-                >
-                  {stock.currentStock}
-                </td>
-
-                <td className="px-4 py-2 flex justify-center gap-2">
+                <td className="px-4 py-2 flex gap-2">
                   <button
                     onClick={() => handleViewClick(stock._id)}
-                    className="px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded shadow"
+                    className="px-2 py-2 bg-green-500 text-white rounded-md"
                   >
-                    <FaEye />
+                    <Eye />
                   </button>
-
                   <button
-                    onClick={() => handleEditClick(stock._id)}
-                    className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded shadow"
+                    className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-md"
+                    onClick={() => handleEditClick(stock)}
                   >
                     Edit
                   </button>
-
                   <button
                     onClick={() => handlePrintBarcode(stock.sku)}
                     className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded shadow"
                   >
                     BrCode
                   </button>
-
                   <button
                     onClick={() => handlePrintQr(stock.sku)}
                     className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded shadow"
@@ -420,52 +434,89 @@ const StockTable = ({ totalStocks, limit, stocks, currentPage, onEdit }) => {
         )}
       </div>
 
-      {/* Existing Modals */}
+      {/* Edit Modal */}
       {isEditModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-          <div className="bg-white rounded p-6 w-[420px]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white  rounded-lg p-6 w-[400px]">
             <h2 className="text-xl font-bold mb-4">Edit Stock</h2>
             <form onSubmit={handleSubmit}>
+              {selectedStock?.branches && selectedStock.branches.length > 0 && (
+                <div className="mb-4">
+                  <label
+                    htmlFor="branchId"
+                    className="block text-sm font-medium"
+                  >
+                    Branch
+                  </label>
+                  <select
+                    id="branchId"
+                    name="branchId"
+                    className="mt-1 block w-full px-3 py-2 border rounded-md shadow-sm"
+                    required
+                  >
+                    <option value="">Select Branch</option>
+                    {selectedStock.branches.map((branch) => (
+                      <option key={branch.branchId} value={branch.branchId}>
+                        {branch.branchName} (Current: {branch.branchStock})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div className="mb-4">
-                <select name="action" className="w-full border p-2">
+                <label htmlFor="action" className="block text-sm font-medium">
+                  Action
+                </label>
+                <select
+                  id="action"
+                  name="action"
+                  defaultValue="increase"
+                  className="mt-1 block w-full px-3 py-2 border rounded-md shadow-sm"
+                  required
+                >
                   <option value="increase">Increase</option>
                   <option value="decrease">Decrease</option>
                 </select>
               </div>
-
               <div className="mb-4">
+                <label htmlFor="quantity" className="block text-sm font-medium">
+                  Quantity
+                </label>
                 <input
                   type="number"
+                  id="quantity"
                   name="quantity"
-                  defaultValue="1"
                   min="1"
-                  className="w-full border p-2"
+                  defaultValue="1"
+                  className="mt-1 block w-full px-3 py-2 border rounded-md shadow-sm"
+                  required
                 />
               </div>
-
               <div className="mb-4">
+                <label htmlFor="reason" className="block text-sm font-medium">
+                  Reason
+                </label>
                 <input
                   type="text"
+                  id="reason"
                   name="reason"
-                  placeholder="Reason"
-                  className="w-full border p-2"
+                  placeholder="Enter reason for stock change"
+                  className="mt-1 block w-full px-3 py-2 border rounded-md shadow-sm"
                 />
               </div>
-
               <div className="flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={closeEditModal}
-                  className="px-4 py-2 bg-gray-600 text-white rounded"
+                  className="bg-danger-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md"
                 >
                   Cancel
                 </button>
-
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded"
+                  className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-md"
                 >
-                  Save
+                  Save Changes
                 </button>
               </div>
             </form>
@@ -473,6 +524,7 @@ const StockTable = ({ totalStocks, limit, stocks, currentPage, onEdit }) => {
         </div>
       )}
 
+      {/* View Stock History Modal */}
       {isViewModalOpen && selectedStockId && (
         <StockHistoryModal
           summaryId={selectedStockId}
@@ -480,6 +532,7 @@ const StockTable = ({ totalStocks, limit, stocks, currentPage, onEdit }) => {
         />
       )}
 
+      {/* Stock Requests Modal */}
       {isRequestModalOpen && selectedStockId && (
         <StockRequestsModal
           stockId={selectedStockId}

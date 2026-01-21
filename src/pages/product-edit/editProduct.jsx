@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import axiosClient from "../../api/axiosClient";
 import CategoryTreeSelect from "../../components/common/CategoryTreeSelect";
 import ProductDataCard from "./ProductDataCard";
-
-// import ReactQuill from "react-quill";
+import MultiImageUpload from "../../components/ui/MultiImageUpload";
+import ReactQuill from "react-quill";
 
 import { toast } from "react-toastify";
 import { useNavigate, useParams } from "react-router-dom";
@@ -19,10 +19,8 @@ import {
 } from "../../features/productEdit/editProductSlice.js";
 
 import TagMultiSelect from "../../components/ui/TagMultiselectFroEditproduct";
-import MultiImageUpload from "../../components/ui/MultiImageUpload.jsx";
 import AdminLayoutWithAuth from "../../components/layout/SidebarLayout.jsx";
 import Loading from "../../components/Loading.jsx";
-import DescriptionEditor from "../../components/common/DescriptionEditor.jsx";
 
 const EditProduct = () => {
   const { productId } = useParams();
@@ -35,8 +33,9 @@ const EditProduct = () => {
     attributes,
     selectedTags,
     selactedAttributes,
-    brands,
     default_attributes,
+    brands,
+    branches, // [NEW]
     tags,
     loading,
     variations,
@@ -60,7 +59,7 @@ const EditProduct = () => {
         action({
           name: name,
           value: name === "vendors" ? res?.data?.data : res?.data,
-        })
+        }),
       );
     } catch (error) {
       console.error(`Error fetching ${endpoint}:`, error);
@@ -85,9 +84,11 @@ const EditProduct = () => {
   };
   useEffect(() => {
     fetchProduct();
+
     fetchData("/categories/all", updateDatas, "categories");
     fetchData("/attributes/all", updateDatas, "attributes");
     fetchData("/brands/all", updateDatas, "brands");
+    fetchData("/branches", updateDatas, "branches"); // [NEW]
     fetchData("/tags/all", updateDatas, "tags");
   }, [productId]);
 
@@ -95,7 +96,7 @@ const EditProduct = () => {
     const { name, value, type } = e.target;
 
     dispatch(
-      updateFormData({ [name]: type === "number" ? Number(value) : value })
+      updateFormData({ [name]: type === "number" ? Number(value) : value }),
     );
   };
 
@@ -112,7 +113,7 @@ const EditProduct = () => {
         Number(formData.purchase_price) > Number(formData.sale_price);
 
       const isInvalidVariation = variations?.some(
-        (v) => Number(v.purchase_price) > Number(v.sale_price)
+        (v) => Number(v.purchase_price) > Number(v.sale_price),
       );
 
       const isinvaide =
@@ -128,6 +129,7 @@ const EditProduct = () => {
           sale_price: v.sale_price,
           purchase_price: v.purchase_price,
           stock: v.stock,
+          branchStocks: v.branchStocks || [],
           attributes: v.attributes?.map((a) => ({
             name: a.name,
             value: a.value,
@@ -156,7 +158,7 @@ const EditProduct = () => {
         payload,
         {
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
 
       if (response?.data?.success) {
@@ -219,9 +221,16 @@ const EditProduct = () => {
                 <label className="block text-sm font-medium text-gray-700">
                   Description
                 </label>
-                <DescriptionEditor
+                <ReactQuill
+                  theme="snow"
                   value={formData.description}
                   onChange={handleDescriptionChange}
+                  className="bg-white"
+                  modules={{
+                    clipboard: {
+                      matchVisual: false, // Ensures formatting is retained
+                    },
+                  }}
                 />
               </div>
             </div>

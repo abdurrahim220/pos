@@ -1,8 +1,13 @@
 import React, { useEffect } from "react";
 import axiosClient from "../../api/axiosClient";
+import CategoryTreeSelect from "../../components/common/CategoryTreeSelect";
+import ProductDataCard from "./ProductDataCard";
+import MultiImageUpload from "../../components/ui/MultiImageUpload";
+import ReactQuill from "react-quill";
 
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
+
 import { useDispatch, useSelector } from "react-redux";
 import {
   updateFormData,
@@ -11,13 +16,9 @@ import {
   setError,
   setInnitialState,
 } from "../../features/product/productSlice";
-import CategoryTreeSelect from "../../components/common/CategoryTreeSelect";
 
-import MultiImageUpload from "../../components/ui/MultiImageUpload";
 import TagMultiSelect from "../../components/ui/TagMultiSelect";
 import AdminLayoutWithAuth from "../../components/layout/SidebarLayout";
-import ProductDataCard from "./ProductDataCard";
-import DescriptionEditor from "../../components/common/DescriptionEditor";
 
 const CreateProduct = () => {
   const dispatch = useDispatch();
@@ -27,12 +28,13 @@ const CreateProduct = () => {
     attributes,
     selectedTags,
     selactedAttributes,
+    defaultAttributes,
     brands,
     variations,
     type,
     tags,
+    branches, // [NEW]
     loading,
-    defaultAttributes
   } = useSelector((state) => state.product);
 
   const navigate = useNavigate();
@@ -47,7 +49,7 @@ const CreateProduct = () => {
         action({
           name: name,
           value: name === "vendors" ? res?.data?.data : res?.data,
-        })
+        }),
       );
     } catch (error) {
       console.error(`Error fetching ${endpoint}:`, error);
@@ -55,13 +57,17 @@ const CreateProduct = () => {
       dispatch(setLoading(false));
     }
   };
+  const handleDescriptionChange = (value) => {
+    dispatch(updateFormData({ description: value }));
+  };
 
   useEffect(() => {
     fetchData("/categories/all", updateDatas, "categories");
     fetchData("/attributes/all", updateDatas, "attributes");
     fetchData("/brands/all", updateDatas, "brands");
-    fetchData("/frontend/size-guides", updateDatas, "sizeGuides");
+    fetchData("/size-guides", updateDatas, "sizeGuides");
     fetchData("/tags/all", updateDatas, "tags");
+    fetchData("/branches", updateDatas, "branches"); // [NEW]
   }, [dispatch]);
 
   const handleInputChange = (e) => {
@@ -78,7 +84,7 @@ const CreateProduct = () => {
       Number(formData.purchase_price) > Number(formData.sale_price);
 
     const isInvalidVariation = variations?.some(
-      (v) => Number(v.purchase_price) > Number(v.sale_price)
+      (v) => Number(v.purchase_price) > Number(v.sale_price),
     );
 
     const isinvaide =
@@ -102,8 +108,7 @@ const CreateProduct = () => {
             };
           }) || [],
         variations: variations || [],
-                  default_attributes: defaultAttributes || [],
-
+        default_attributes: defaultAttributes || [],
       };
 
       const skus =
@@ -124,7 +129,7 @@ const CreateProduct = () => {
                 "Content-Type": "application/json",
               },
               body: JSON.stringify({ sku }),
-            }
+            },
           );
           return { sku, response: response2 }; // Include SKU for error reporting
         }
@@ -155,14 +160,14 @@ const CreateProduct = () => {
         setError(
           error.response?.data?.error ||
             error?.response?.data?.message ||
-            "Failed to save product"
-        )
+            "Failed to save product",
+        ),
       );
       toast.error(
         error.response?.data?.error ||
           error?.response?.message ||
           error?.response?.data?.message ||
-          "Failed to save product"
+          "Failed to save product",
       );
     } finally {
       dispatch(setLoading(false));
@@ -207,14 +212,46 @@ const CreateProduct = () => {
                 />
               </div>
               <div className="space-y-2 pb-10 min-h-fit">
-                <label className="block text-lg font-medium text-gray-700">
+                <label className="block text-sm font-medium text-gray-700">
                   Description
                 </label>
-                <DescriptionEditor
+                <ReactQuill
+                  theme="snow"
                   value={formData.description}
-                  onChange={(value) =>
-                    dispatch(updateFormData({ description: value }))
-                  }
+                  onChange={handleDescriptionChange}
+                  className="bg-white!"
+                  style={{ height: 280, paddingBottom: "10px" }}
+                  modules={{
+                    toolbar: [
+                      [{ font: [] }],
+                      [{ size: [] }],
+                      ["bold", "italic", "underline", "strike"],
+                      [{ color: [] }, { background: [] }],
+                      [{ align: [] }],
+                      ["link", "blockquote", "code-block"],
+                      [{ list: "ordered" }, { list: "bullet" }],
+                      ["clean"],
+                    ],
+                  }}
+                  formats={[
+                    "header",
+                    "font",
+                    "size",
+                    "bold",
+                    "italic",
+                    "underline",
+                    "strike",
+                    "blockquote",
+                    "list",
+                    "bullet",
+                    "indent",
+                    "link",
+                    "image",
+                    "video",
+                    "color",
+                    "background",
+                    "align",
+                  ]}
                 />
               </div>
             </div>
@@ -264,38 +301,38 @@ const CreateProduct = () => {
               />
               {/* Video Upload */}
               <div className=" space-y-4">
-              {/* Video Upload */}
-              <div className="flex justify-center items-center gap-8">
-                <label className="w-24 text-gray-700">Video Link</label>
-                <div className="flex-1 space-y-3">
-                  {/* Upload Input */}
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      name="video_link"
-                      value={formData.video_link}
-                      onChange={handleInputChange}
-                      placeholder="Enter your video url"
-                      className="flex-1 px-3 py-2 bg-gray-50 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                    />
+                {/* Video Upload */}
+                <div className="flex justify-center items-center gap-8">
+                  <label className="w-24 text-gray-700">Video Link</label>
+                  <div className="flex-1 space-y-3">
+                    {/* Upload Input */}
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        name="video_link"
+                        value={formData.video_link}
+                        onChange={handleInputChange}
+                        placeholder="Enter your video url"
+                        className="flex-1 px-3 py-2 bg-gray-50 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="flex justify-center items-center gap-5">
-                <label className="block text-sm font-medium text-gray-700">
-                  Purchase Price (BDT)
-                </label>
-                <input
-                  type="number"
-                  name="default_price"
-                  value={formData.default_price}
-                  onChange={handleInputChange}
-                  placeholder="Default Price"
-                  className="w-full border border-gray-300 rounded px-3 py-2"
-                />
+                <div className="flex justify-center items-center gap-5">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Purchase Price (BDT)
+                  </label>
+                  <input
+                    type="number"
+                    name="default_price"
+                    value={formData.default_price}
+                    onChange={handleInputChange}
+                    placeholder="Default Price"
+                    className="w-full border border-gray-300 rounded px-3 py-2"
+                  />
+                </div>
               </div>
-            </div>
             </div>
           </div>
         </div>
@@ -316,7 +353,7 @@ const CreateProduct = () => {
                 <select
                   name="brand"
                   onChange={handleInputChange}
-                  value={fetchData.brand}
+                  value={formData.brand}
                   className="w-full appearance-none bg-background border border-gray-300 rounded px-3 py-2 pr-8 focus:outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-400 text-gray-500"
                 >
                   <option value="">Select an option</option>
