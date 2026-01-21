@@ -347,6 +347,25 @@ const EditProduct = () => {
               </div>
 
               <div className="space-y-2">
+                <label className="block text-sm text-gray-700">Branch</label>
+                <select
+                  name="branch"
+                  onChange={handleInputChange}
+                  value={formData.branch}
+                  className="w-full appearance-none bg-background border border-gray-300 rounded px-3 py-2 pr-8 focus:outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-400 text-gray-500"
+                >
+                  <option value="">Select an option</option>
+                  {branches &&
+                    branches.length > 0 &&
+                    branches?.map((branch, i) => (
+                      <option value={branch._id} key={i}>
+                        {branch.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
                 <label className="block text-sm text-gray-700">Tags</label>
                 <TagMultiSelect tags={tags} />
               </div>

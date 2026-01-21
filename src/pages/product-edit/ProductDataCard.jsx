@@ -11,6 +11,7 @@ import {
 } from "../../features/productEdit/editProductSlice";
 import axiosClient from "../../api/axiosClient";
 import { toast } from "react-toastify";
+import EditDefaultAttributeSelector from "./EditDefaultAttributeSelector";
 
 const ProductDataCard = ({ Allattributes, setFormData, product }) => {
   const {
@@ -393,6 +394,7 @@ const ProductDataCard = ({ Allattributes, setFormData, product }) => {
                     handleDeleteAttributeId={handleDeleteAttributeId}
                   />
                 ))}
+              <EditDefaultAttributeSelector />
             </div>
           </div>
         )}

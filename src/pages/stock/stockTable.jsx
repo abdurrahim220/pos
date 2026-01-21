@@ -436,7 +436,7 @@ const StockTable = ({ totalStocks, limit, stocks, currentPage, onEdit }) => {
 
       {/* Edit Modal */}
       {isEditModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center ">
           <div className="bg-white  rounded-lg p-6 w-[400px]">
             <h2 className="text-xl font-bold mb-4">Edit Stock</h2>
             <form onSubmit={handleSubmit}>
@@ -508,13 +508,13 @@ const StockTable = ({ totalStocks, limit, stocks, currentPage, onEdit }) => {
                 <button
                   type="button"
                   onClick={closeEditModal}
-                  className="bg-danger-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md"
+                  className="bg-danger-600 bg-black text-white px-4 py-2 rounded-md"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-md"
+                  className="bg-primary-600 bg-black text-white px-4 py-2 rounded-md"
                 >
                   Save Changes
                 </button>

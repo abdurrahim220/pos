@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { FiSearch } from "react-icons/fi";
+import { Icon } from "@iconify/react";
 import { toast } from "react-toastify";
 
 import StockTable from "./stockTable.jsx";
@@ -16,7 +16,6 @@ const StockList = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [limit] = useState(20);
   const [loading, setLoading] = useState(true);
-  
 
   useEffect(() => {
     fetchStocks();
@@ -57,7 +56,7 @@ const StockList = () => {
     try {
       const response = await axiosClient.put(
         `/pos-stock?summaryId=${id}`,
-        updatedData
+        updatedData,
       );
 
       if (response?.data?.success) {
@@ -71,8 +70,8 @@ const StockList = () => {
                       ? stock.currentStock + updatedData.quantity
                       : stock.currentStock - updatedData.quantity,
                 }
-              : stock
-          )
+              : stock,
+          ),
         );
         toast.success("Stock updated successfully");
       } else {
@@ -107,98 +106,101 @@ const StockList = () => {
 
   return (
     <AdminLayoutWithAuth>
-      <div>
-        <div className="card mt-4 ">
-          <div className="card-header flex flex-wrap items-center justify-between gap-3 border-b pb-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="icon-field relative">
-                <input
-                  type="text"
-                  value={search}
-                  onChange={handleSearch}
-                  className="bg-white ps-10 py-2 border border-gray-300 rounded-xl w-72 shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  placeholder="Search by product name or SKU"
-                />
-                <span className="icon absolute top-1/2 left-2 -translate-y-1/2 text-xl text-gray-500 flex">
-                  <FiSearch />
-                </span>
+      <div className="grid grid-cols-12">
+        <div className="col-span-12">
+          <BreadCrumb name={"Stock List"} />
+          <div className="card border-0 mt-4">
+            <div className="card-header flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="icon-field relative">
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={handleSearch}
+                    className="bg-white ps-10 border-neutral-200 rounded-lg w-auto"
+                    placeholder="Search by product name or SKU"
+                  />
+                  <span className="icon absolute top-1/2 left-0 text-lg flex">
+                    <Icon icon="ion:search-outline" />
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="card-body">
-            <div className="overflow-hidden rounded-xl border shadow-sm">
-              {loading ? (
-                <TrLoader />
-              ) : (
-                <StockTable
-                  totalStocks={totalStocks}
-                  limit={limit}
-                  stocks={stocks}
-                  currentPage={currentPage}
-                  onEdit={handleEdit}
-                />
-              )}
-            </div>
-
-            {/* ------------ PAGINATION UI ------------ */}
-            <div className="flex justify-center mt-6">
-              <ul className="flex items-center gap-2">
-                <button
-                  onClick={() => handlePageChange(1)}
-                  disabled={currentPage === 1}
-                  className="px-4 py-2 rounded-lg bg-gray-100 text-black hover:bg-gray-200 disabled:opacity-40"
-                >
-                  First
-                </button>
-
-                <button
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className="px-4 py-2 rounded-lg bg-gray-100 text-black hover:bg-gray-200 disabled:opacity-40"
-                >
-                  Prev
-                </button>
-
-                {getPageNumbers().map((page, index) =>
-                  page === "..." ? (
-                    <span
-                      key={index}
-                      className="px-4 py-2 rounded-lg bg-gray-50 text-gray-500"
-                    >
-                      ...
-                    </span>
-                  ) : (
-                    <button
-                      key={index}
-                      onClick={() => handlePageChange(page)}
-                      className={`px-4 py-2 rounded-lg border transition ${
-                        currentPage === page
-                          ? "bg-blue-600 text-white border-blue-600"
-                          : "bg-white text-gray-800 hover:bg-gray-100 border-gray-300"
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  )
+            <div className="card-body">
+              <div className="overflow-hidden rounded-lg shadow">
+                {loading ? (
+                  <TrLoader />
+                ) : (
+                  <StockTable
+                    totalStocks={totalStocks}
+                    limit={limit}
+                    stocks={stocks}
+                    currentPage={currentPage}
+                    onEdit={handleEdit}
+                  />
                 )}
+              </div>
 
-                <button
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className="px-4 py-2 rounded-lg bg-gray-100 text-black hover:bg-gray-200 disabled:opacity-40"
-                >
-                  Next
-                </button>
+              {/* ------------ PAGINATION UI ------------ */}
+              <div className="flex justify-center mt-6">
+                <ul className="flex items-center gap-2">
+                  <button
+                    onClick={() => handlePageChange(1)}
+                    disabled={currentPage === 1}
+                    className="px-4 py-2 rounded-lg bg-gray-100 text-black hover:bg-gray-200 disabled:opacity-40"
+                  >
+                    First
+                  </button>
 
-                <button
-                  onClick={() => handlePageChange(totalPages)}
-                  disabled={currentPage === totalPages}
-                  className="px-4 py-2 rounded-lg bg-gray-100 text-black hover:bg-gray-200 disabled:opacity-40"
-                >
-                  Last
-                </button>
-              </ul>
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="px-4 py-2 rounded-lg bg-gray-100 text-black hover:bg-gray-200 disabled:opacity-40"
+                  >
+                    Prev
+                  </button>
+
+                  {getPageNumbers().map((page, index) =>
+                    page === "..." ? (
+                      <span
+                        key={index}
+                        className="px-4 py-2 rounded-lg bg-gray-50 text-gray-500"
+                      >
+                        ...
+                      </span>
+                    ) : (
+                      <button
+                        key={index}
+                        onClick={() => handlePageChange(page)}
+                        className={`px-4 py-2 rounded-lg border transition ${
+                          currentPage === page
+                            ? "bg-blue-600 text-white border-blue-600"
+                            : "bg-white text-gray-800 hover:bg-gray-100 border-gray-300"
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    ),
+                  )}
+
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="px-4 py-2 rounded-lg bg-gray-100 text-black hover:bg-gray-200 disabled:opacity-40"
+                  >
+                    Next
+                  </button>
+
+                  <button
+                    onClick={() => handlePageChange(totalPages)}
+                    disabled={currentPage === totalPages}
+                    className="px-4 py-2 rounded-lg bg-gray-100 text-black hover:bg-gray-200 disabled:opacity-40"
+                  >
+                    Last
+                  </button>
+                </ul>
+              </div>
             </div>
           </div>
         </div>

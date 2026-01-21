@@ -6,6 +6,7 @@ const initialState = {
   attributes: [],
   brands: [],
   vendors: [],
+  branches: [],
   tags: [],
   selectedTags: [],
   selectedValues: [],
@@ -13,7 +14,7 @@ const initialState = {
   variations: [],
   selactedAttributeIds: [],
   selactedAttributes: [],
-   default_attributes: [],
+  default_attributes: [],
   formData: {
     name: "",
     category: "",
@@ -26,6 +27,7 @@ const initialState = {
     images: [],
     video_link: "",
     brand: "",
+    branch: "",
     vendor: "",
     tags: [],
     warranty: false,
@@ -50,13 +52,21 @@ const editProductSlice = createSlice({
         purchase_price: product?.purchase_price || 0,
         sale_price: product?.sale_price || 0,
         sku: product?.sku || "",
-        stock: product?.stock || 0,
+        stock:
+          product?.type === "simple"
+            ? product?.stock?.stock || 0
+            : product?.stock || 0,
+        branchStocks:
+          product?.type === "simple"
+            ? product?.stock?.branchStocks || []
+            : product?.branchStocks || [],
         images: product?.images || [],
         default_image: product?.default_image || {},
         default_price: product?.default_price || 0,
         video_link: product?.video_link || "",
-        brand: product?.brand?._id || "",
-        vendor: product?.vendor?._id || "",
+        brand: product?.brand?._id || product?.brand || "",
+        branch: product?.branch?._id || product?.branch || "",
+        vendor: product?.vendor?._id || product?.vendor || "",
         tags: product?.tags?.length ? product?.tags.map((tag) => tag._id) : [],
         status: product?.status || "Draft",
         warranty: product?.warranty || false,
@@ -69,12 +79,20 @@ const editProductSlice = createSlice({
       state.activeTab = product?.type === "simple" ? "General" : "Inventory";
       state.variations = product?.variations || [];
       if (product?.type === "variable" && product?.variations) {
-        state.variations = product.variations.map((variation, index) => ({
-          ...variation,
-          // Add stock from the stock array if available
-          stock: product?.stock?.[index]?.stock || variation.stock || 0,
-          stockSummaryId: product?.stock?.[index]?.stockSummaryId || null,
-        }));
+        state.variations = product.variations.map((variation, index) => {
+          const stockInfo = Array.isArray(product?.stock)
+            ? product.stock.find((s) => s.sku === variation.sku)
+            : null;
+
+          return {
+            ...variation,
+            // Add stock from the stock array if available
+            stock: stockInfo?.stock || variation.stock || 0,
+            branchStocks:
+              stockInfo?.branchStocks || variation.branchStocks || [],
+            stockSummaryId: stockInfo?.stockSummaryId || null,
+          };
+        });
       } else {
         state.variations = product?.variations || [];
       }
@@ -85,6 +103,7 @@ const editProductSlice = createSlice({
           name: a.name || "",
           values: a.values || [],
         })) || [];
+      state.default_attributes = product?.default_attributes || [];
     },
 
     setActiveTab: (state, action) => {
@@ -95,18 +114,18 @@ const editProductSlice = createSlice({
       state.type = action.payload;
       state.selactedAttributes = [];
     },
-     setDefaultAttributes: (state, action) => {
+    setDefaultAttributes: (state, action) => {
       const { attributeId, value } = action.payload;
       // console.log("setDefaultAttributes", attributeId, value);
       const existingIndex = state.default_attributes.findIndex(
-        (attr) => attr._id === attributeId
+        (attr) => attr._id === attributeId,
       );
 
       if (existingIndex !== -1) {
         state.default_attributes[existingIndex].value = value;
       } else {
         const attribute = state.selactedAttributes.find(
-          (attr) => attr._id === attributeId
+          (attr) => attr._id === attributeId,
         );
         if (attribute) {
           state.default_attributes.push({
@@ -119,7 +138,7 @@ const editProductSlice = createSlice({
     },
     removeDefaultAttribute: (state, action) => {
       state.default_attributes = state.default_attributes.filter(
-        (attr) => attr._id !== action.payload
+        (attr) => attr._id !== action.payload,
       );
     },
     clearDefaultAttributes: (state) => {
@@ -128,7 +147,7 @@ const editProductSlice = createSlice({
     updateDefaultAttributesOnAttributeChange: (state) => {
       state.default_attributes = state.default_attributes.filter(
         (defaultAttr) =>
-          state.selactedAttributes.some((attr) => attr._id === defaultAttr._id)
+          state.selactedAttributes.some((attr) => attr._id === defaultAttr._id),
       );
     },
 
@@ -148,7 +167,7 @@ const editProductSlice = createSlice({
 
     removeImage: (state, action) => {
       state.formData.images = state.formData.images.filter(
-        (_, index) => index !== action.payload
+        (_, index) => index !== action.payload,
       );
     },
 
@@ -160,7 +179,7 @@ const editProductSlice = createSlice({
 
     removeSelectedTagValue: (state, action) => {
       state.selectedTags = state.selectedTags.filter(
-        (tag) => tag.name !== action.payload.name
+        (tag) => tag.name !== action.payload.name,
       );
     },
 
@@ -189,7 +208,7 @@ const editProductSlice = createSlice({
 
     updateSelectedAttributes: (state, action) => {
       const index = state.selactedAttributes.findIndex(
-        (attr) => attr.name === action.payload.name
+        (attr) => attr.name === action.payload.name,
       );
 
       if (index !== -1) {
@@ -202,7 +221,7 @@ const editProductSlice = createSlice({
     removeSelectedAttributeValue: (state, action) => {
       const { name, value } = action.payload;
       const indx = state.selactedAttributes.findIndex(
-        (attr) => attr.name === name
+        (attr) => attr.name === name,
       );
 
       if (indx !== -1) {
@@ -217,7 +236,7 @@ const editProductSlice = createSlice({
 
     removeSelectedAttribute: (state, action) => {
       state.selactedAttributes = state.selactedAttributes.filter(
-        (attr) => attr.name !== action.payload
+        (attr) => attr.name !== action.payload,
       );
     },
 
@@ -228,27 +247,31 @@ const editProductSlice = createSlice({
     updateVariations: (state, action) => {
       state.variations = action.payload;
     },
- updateVariationDefaultImage: (state, action) => {
+    updateVariationDefaultImage: (state, action) => {
       const { index, image } = action.payload;
       if (!state.variations[index]) return;
 
       state.variations[index].default_image = image;
     },
     addVariation: (state, action) => {
-      const newVariation = action.payload;
+      const newVariation = {
+        ...action.payload,
+        images: [],
+        default_image: null,
+      };
       const exists = state.variations.some((variation) =>
         variation.attributes.every(
           (attr, index) =>
             attr.name === newVariation[index]?.name &&
-            attr.value === newVariation[index]?.value
-        )
+            attr.value === newVariation[index]?.value,
+        ),
       );
       if (!exists) state.variations.push(newVariation);
     },
 
     removeVariation: (state, action) => {
       state.variations = state.variations.filter(
-        (_, i) => i !== action.payload
+        (_, i) => i !== action.payload,
       );
     },
 
@@ -295,16 +318,16 @@ export const {
   addVariation,
   removeVariation,
   updateVariationField,
-loading,
+  loading,
   updateDatas,
   setLoading,
   setError,
   clearError,
-   setDefaultAttributes,
+  setDefaultAttributes,
   removeDefaultAttribute,
   clearDefaultAttributes,
   updateDefaultAttributesOnAttributeChange,
-  updateVariationDefaultImage
+  updateVariationDefaultImage,
 } = editProductSlice.actions;
 
 export default editProductSlice.reducer;
